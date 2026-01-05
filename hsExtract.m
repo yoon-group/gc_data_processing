@@ -181,7 +181,7 @@ if nSample
     
     n2o_ppm_measured = (peakH*slope + offset).*dilutionFactor;
     
-    n2o_ppm = (n2o_ppm_measured .* (bottleSize/1000+valveVol) - (valveVol*n2o_ppm_atm))./bottleVol;
+    n2o_ppm = (n2o_ppm_measured .* (Vg+valveVol) - (valveVol*n2o_ppm_atm))./Vg;
 
 
     n2o_atm = n2o_ppm * 1e-6; % Fractional concentration of N2O in the gas 
