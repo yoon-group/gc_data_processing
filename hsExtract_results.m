@@ -1,66 +1,17 @@
 clear all; clc; clf
 
-%% He & N2
-% flNameSample = sprintf('%s/processed_HE_N2/HE_N2.mat',pwd);
-% load(flNameSample,'T_HE_N2')
-% 
-% T_HE = T_HE_N2(strcmp(T_HE_N2.gasType, 'HE'),:);
-% T_N2 = T_HE_N2(strcmp(T_HE_N2.gasType, 'N2'),:);
-% 
-% HE_N2O = T_HE.n2o_ugN_L(2:end);
-% N2_N2O = T_N2.n2o_ugN_L(2:end);
-% 
-% M = [mean(HE_N2O) mean(N2_N2O)];
-% E = [std(HE_N2O) std(N2_N2O)];
-% 
-% clf
-% errorbar(M,E,'x')
-% 
-% xlim([0.5 2.5])
-% 
-% ax = gca;
-% ax.XTick = [1 2];
-% ax.XTickLabel = {"He","N2"}
-% ax.FontSize = 20;
-% ylabel('N2O [ug/ml]')
-% xlabel('Gas type')
-
 
 %% load sample data
 flNameSample = sprintf('%s/processed_hsExtract/sample.mat',pwd);
 load(flNameSample,'T_sample')
 
-T_rise = T_sample(strcmp(T_sample.location, 'RISE'),:);
+inertGas = {'N2','HE'};
 
-location = {'RISE','WELL3','WELL4'};
-bottleSize = [7.84 24 70 157];
-shakeTime = [3 5 8];
+location = {'RR','W3','W4'};
+bottleSize = [10 25 72 158]; %[mL]
+shakeTime = [3 5 8]; %[min]
 
-n2o_avg_vol_time = size(numel(location),numel(bottleSize),numel(shakeTime));
-n2o_std_vol_time = size(numel(location),numel(bottleSize),numel(shakeTime));
-
-for iLoc = 1:numel(location)
-for iVol = 1:numel(bottleSize)
-for iTime = 1:numel(shakeTime)
-    tmp = T_sample(strcmp(T_sample.location,location{iLoc}) ...
-           & T_sample.bottleSize==bottleSize(iVol) ...
-           & T_sample.shakeTime==shakeTime(iTime) ...
-           & ~T_sample.suspicious...
-           ,:).n2o_ugN_L;
-
-    % tmp = T_sample(strcmp(T_sample.location,location{iLoc}) ...
-    %        & T_sample.bottleSize==bottleSize(iVol) ...
-    %        & T_sample.shakeTime==shakeTime(iTime) ...
-    %        ,:).n2o_ugN_L;
-
-    n2o_avg_vol_time(iLoc,iVol,iTime) = mean(tmp);
-    n2o_std_vol_time(iLoc,iVol,iTime) = std(tmp);
-    
-end
-end
-end
-
-%%
+%% load standard sample data and calibration curves
 flNameSTD = sprintf('%s/processed/STD.mat',pwd);
 load(flNameSTD,'T_STD','slope','offset')
 %% ========================================================================
@@ -73,34 +24,23 @@ amuN2O = 2*amuN + amuO;
 % 
 tempK = T_sample.tempK;
 peakH = T_sample.peakH;
-dilutionFactor = T_sample.dilutionFactor;
-bottleSize = T_sample.bottleSize;
 
-bottleVol = bottleSize/1000; %[L]
+bottleVol = T_sample.bottleSize/1000; %[L]
 Vaq = bottleVol*9/10; %[L] 
 Vg =  bottleVol*1/10; %[L] 
+Vsyringe = 1/1000; %[L]
 
 valveVol = 3/1000; %[L]
-n2o_ppm_atm = 340/1000; %[ppm]
+n2o_ppm_valve = 0/1000; %[ppm]
 
 logK0 = A + (B./tempK) + C*(log(tempK));
 K0 = exp(logK0); % Henry's law constant [mol/L/atm]
     
     % Not valve corrected -----------------------------------------
-    n2o_ppm_uncorrected = (peakH*slope + offset).*dilutionFactor;
-    n2o_atmUnit_uncorrected = n2o_ppm_uncorrected * 1e-6;
-
-    ng_uncorrected = (n2o_atmUnit_uncorrected .* Vg)./(R*tempK); % N2O moles in gas phase (from ideal gas law)
-    naq_uncorrected = K0.*n2o_atmUnit_uncorrected.*Vaq; % dissolved N2O moles in aqueous phase (from Henry's law)
+    n2o_ppm_uncorrected = (peakH*slope + offset);
     
-    n2o_mol_L_uncorrected = (ng_uncorrected+naq_uncorrected)./Vaq; % Total N2O concentration in mol/L
-    n2o_molN_L_uncorrected = n2o_mol_L_uncorrected * 2;
-    n2o_gN_L_uncorrected = n2o_molN_L_uncorrected * amuN;
-    n2o_mgN_L_uncorrected = n2o_gN_L_uncorrected * 1e+3;
-    n2o_ugN_L_uncorrected = n2o_mgN_L_uncorrected * 1e+3;
-
     % Valve corrected -----------------------------------------
-    n2o_ppm = (n2o_ppm_uncorrected .* (bottleSize/1000+valveVol) - (valveVol*n2o_ppm_atm))./bottleVol;
+    n2o_ppm = (n2o_ppm_uncorrected .* (Vsyringe+valveVol) )./Vsyringe;
     
     n2o_atmUnit = n2o_ppm * 1e-6; % Fractional concentration of N2O in the gas 
                               % phase. By mulitiplying the total pressure 
@@ -122,7 +62,7 @@ K0 = exp(logK0); % Henry's law constant [mol/L/atm]
     logK0_atm = A + (B./mean(tempK)) + C*(log(mean(tempK)));
     K0_atm = exp(logK0_atm); % Henry's law constant [mol/L/atm]
     
-    n2o_atm_atmUnit = n2o_ppm_atm * 1e-6;
+    n2o_atm_atmUnit = n2o_ppm_valve * 1e-6;
     ng_atm = (n2o_atm_atmUnit .* Vg)./(R*mean(tempK)); % N2O moles in gas phase (from ideal gas law)
     naq_atm = K0_atm.*n2o_atm_atmUnit.*Vaq; % dissolved N2O moles in aqueous phase (from Henry's law)
     
@@ -136,315 +76,160 @@ K0 = exp(logK0); % Henry's law constant [mol/L/atm]
 % T_sample = removevars(T_sample,'n2o_ppm_measured');
 T_sample.n2o_ppm_uncorrected = n2o_ppm_uncorrected;
 T_sample.n2o_ppm = n2o_ppm;
-T_sample.n2o_molN_L_uncorrected = n2o_molN_L_uncorrected;
-T_sample.n2o_ugN_L_uncorrected = n2o_ugN_L_uncorrected;
 T_sample.n2o_ugN_L = n2o_ugN_L;
 T_sample.n2o_atm_ugN_L = n2o_atm_ugN_L;
 
 
-bottleSize = [7.84 24 70 157];
-shakeTime = [3 5 8];
 
-n2o_avg_vol_time_uncorrected = size(numel(location),numel(bottleSize),numel(shakeTime));
-n2o_std_vol_time_uncorrected = size(numel(location),numel(bottleSize),numel(shakeTime));
+%% data arrangements
 
-n2o_avg_vol_time = size(numel(location),numel(bottleSize),numel(shakeTime));
-n2o_std_vol_time = size(numel(location),numel(bottleSize),numel(shakeTime));
+n2o_avg_vol_time_uncorrected = size(numel(inertGas),numel(location),numel(bottleSize),numel(shakeTime));
+n2o_std_vol_time_uncorrected = size(numel(inertGas),numel(location),numel(bottleSize),numel(shakeTime));
 
-n2o_atm_avg_vol_time = size(numel(location),numel(bottleSize),numel(shakeTime));
+n2o_avg_vol_time = size(numel(inertGas),numel(location),numel(bottleSize),numel(shakeTime));
+n2o_std_vol_time = size(numel(inertGas),numel(location),numel(bottleSize),numel(shakeTime));
 
+n2o_atm_avg_vol_time = size(numel(inertGas),numel(location),numel(bottleSize),numel(shakeTime));
 
+for iGas = 1:numel(inertGas)
 for iLoc = 1:numel(location)
 for iVol = 1:numel(bottleSize)
 for iTime = 1:numel(shakeTime)
-    tmp = T_sample(strcmp(T_sample.location,location{iLoc}) ...
+    tmp = T_sample(strcmp(T_sample.inertGas,inertGas{iGas})... 
+           & strcmp(T_sample.location,location{iLoc}) ...
            & T_sample.bottleSize==bottleSize(iVol) ...
            & T_sample.shakeTime==shakeTime(iTime) ...
-           & ~T_sample.suspicious...
            ,:).n2o_ugN_L;
 
-    tmp_uncorrected = T_sample(strcmp(T_sample.location,location{iLoc}) ...
+   
+
+    n2o_avg_vol_time(iGas,iLoc,iVol,iTime) = mean(tmp);
+    n2o_std_vol_time(iGas,iLoc,iVol,iTime) = std(tmp);
+
+    n2o_atm_avg_vol_time(iGas,iLoc,iVol,iTime) = mean(n2o_atm_ugN_L( strcmp(T_sample.inertGas,inertGas{iGas})... 
+           & strcmp(T_sample.location,location{iLoc}) ...
            & T_sample.bottleSize==bottleSize(iVol) ...
-           & T_sample.shakeTime==shakeTime(iTime) ...
-           & ~T_sample.suspicious...
-           ,:).n2o_ugN_L_uncorrected;
-
-    % tmp = T_sample(strcmp(T_sample.location,location{iLoc}) ...
-    %        & T_sample.bottleSize==bottleSize(iVol) ...
-    %        & T_sample.shakeTime==shakeTime(iTime) ...
-    %        ,:).n2o_ugN_L;
-
-    n2o_avg_vol_time(iLoc,iVol,iTime) = mean(tmp);
-    n2o_std_vol_time(iLoc,iVol,iTime) = std(tmp);
-
-    n2o_avg_vol_time_uncorrected(iLoc,iVol,iTime) = mean(tmp_uncorrected);
-    n2o_std_vol_time_uncorrected(iLoc,iVol,iTime) = std(tmp_uncorrected);
-
-    n2o_atm_avg_vol_time(iLoc,iVol,iTime) = mean(n2o_atm_ugN_L(strcmp(T_sample.location,location{iLoc}) ...
-           & T_sample.bottleSize==bottleSize(iVol) ...
-           & T_sample.shakeTime==shakeTime(iTime) ...
-           & ~T_sample.suspicious));
+           & T_sample.shakeTime==shakeTime(iTime) ));
     
     
 end
 end
 end
-
+end
 
 writetable(T_sample,'HS_extract.xlsx')
 
-%% valve corrected N2O
+%% plot mean N2O for location * volume * shaking time
 clf; clc
 
-flNameFig = sprintf('HS_extract_corrected.png');
-
-% figure
-clr = 'rkc';
-% for iLoc = 1:numel(location)
-
 [xx,yy] = meshgrid(1:3, 1:4);
+az = -80;
+el = 15;
 
-fx1= -50; 
-fx2= 13.58;
+for iGas = 1:2
+    clf
 
-% subplot(121)
-data1 = squeeze(n2o_avg_vol_time(1,:,:));
-ax1 = axes;
-surf(ax1,xx,yy,squeeze(data1), 'FaceColor', 'interp', 'EdgeColor', 'none', 'FaceAlpha', 1);
-cl1 = clim(ax1);
-mean1 = mean(cl1);
+    fig = gcf;
+    fig.Units = 'inches';
+    fig.PaperPosition = [0 0 7 8];
 
-view(fx1,fx2)
-cbh = colorbar
-cbh.Ticks = linspace(cl1(1),cl1(2),7);
-cbh.TickLabels = sprintf('%.3f\n',cbh.Ticks' - mean1);
+    flNameFig = sprintf('HS_extract_%s.png', inertGas{iGas});
 
+    %-----------------------------
+    % Data
+    %-----------------------------
+    data = squeeze(n2o_avg_vol_time(iGas,1:3,:,:));   % 3 x 4 x 3
+    alphaVals = [1 0.8 0.8];
 
-data2 = squeeze(n2o_avg_vol_time(2,:,:));
-ax2 = axes;
-surf(ax2,xx,yy,squeeze(data2), 'FaceColor', 'interp', 'EdgeColor', 'none', 'FaceAlpha', 0.8);
-cl2 = clim(ax2);
-mean2 = mean(cl2);
-view(fx1,fx2)
-clim(ax2,cl1-mean1+mean2)
-axis off
+    % Center each plane by its own mean for coloring
+    cdata = zeros(size(data));
+    for k = 1:3
+        cdata(k,:,:) = data(k,:,:) - mean(data(k,:,:), 'all');
+    end
 
+    clim_common = max(abs(cdata(:))) * [-1 1];
 
-data3 = squeeze(n2o_avg_vol_time(3,:,:));
-ax3 = axes;
-surf(ax3,xx,yy,data3, 'FaceColor', 'interp', 'EdgeColor', 'none', 'FaceAlpha', 0.8);
-cl3 = clim(ax3);
-mean3 = mean(cl3);
-view(fx1,fx2)
-clim(ax3,cl1-mean1+mean3)
-axis off
+    %-----------------------------
+    % Plot
+    %-----------------------------
+    ax = axes;
+    hold(ax,'on')
 
+    for k = 1:3
+        surf(ax, xx, yy, squeeze(data(k,:,:)), squeeze(cdata(k,:,:)), ...
+            'FaceColor','interp', ...
+            'EdgeColor','none', ...
+            'FaceAlpha',alphaVals(k));
+    end
 
-data4 = squeeze(n2o_atm_avg_vol_time(3,:,:));
-ax4 = axes;
-surf(ax4,xx,yy,data4, 'FaceColor', 'k', 'EdgeColor', 'none', 'FaceAlpha', 0.1);
-cl4 = clim(ax4);
-mean4 = mean(cl4);
-view(fx1,fx2)
-clim(ax4,cl1-mean1+mean4)
-axis off
+    view(ax, az, el)
+    colormap(ax, jet)
+    clim(ax, clim_common)
 
+    xlim(ax,[0.7 3.3])
+    ylim(ax,[0.7 4.3])
 
-ax2.Position = ax1.Position;
-ax3.Position = ax1.Position;
-ax4.Position = ax1.Position;
+    ax.XTick = 1:3;
+    ax.XTickLabel = string(shakeTime);
+    ax.YTick = 1:4;
+    ax.YTickLabel = string(bottleSize);
+    ax.FontSize = 14;
+    ax.Position = [0.12 0.12 0.62 0.78];
 
-ax2.Color = 'none'; % set the background color for ax2 to transparent
-ax3.Color = 'none'; % set the background color for ax2 to transparent
-ax4.Color = 'none'; % set the background color for ax2 to transparent
+    ylabel(ax,'Volume [ml]')
+    zlabel(ax,'N_2O [\mug N/L]')
+    title(ax, sprintf('Inert Gas: %s', inertGas{iGas}), 'FontSize', 16)
 
-colmap = 'jet';
-colormap(ax1,colmap); %colorbar; % change the color of s1
-colormap(ax2,colmap); % change the color of s2
-colormap(ax3,colmap); % change the color of s2
-colormap(ax4,colmap); % change the color of s2
+    box(ax,'on')
+    grid(ax,'on')
 
-linkaxes([ax1 ax2 ax3 ax4])
+    %-----------------------------
+    % Colorbar
+    %-----------------------------
+    cbh = colorbar(ax, 'eastoutside');
+    cbh.Position = [0.85 0.20 0.025 0.70];
+    cbh.Ticks = linspace(clim_common(1), clim_common(2), 7);
+    cbh.TickLabels = compose('%.3f', cbh.Ticks);
 
-xlabel('shake time [min]'); xlim([0.7 3.3])
-ylabel('volume [ml]'); ylim([0.7 4.3])
-zlabel('N_2O [ug N/L]'); zlim([0.2 2])
+    %-----------------------------
+    % Custom x-label as rotated text
+    %-----------------------------
+    drawnow
+    xl = xlim(ax);
+    yl = ylim(ax);
+    zl = zlim(ax);
 
-ax1.XTick = 1:3; ax1.XTickLabel = num2cell(shakeTime);
-ax1.YTick = 1:4; ax1.YTickLabel = num2cell(bottleSize);
+    text(ax, mean(xl), yl(1) - 0.10*range(yl), zl(1), 'Shake time [min]', ...
+        'HorizontalAlignment','center', ...
+        'VerticalAlignment','top', ...
+        'FontSize',14, ...
+        'Rotation', -(az + 13));
 
-xlabel(ax1,'Shake time [min]')
-ylabel(ax1,'Volume [ml]')
-zlabel(ax1,'N_2O [μg N/l]')
-set(ax1,'fontSize',14)
-
-fig = gcf;
-fig.Units = 'inches';
-fig.PaperPosition = [0 0 7 8];
-
-print(fig,flNameFig,'-dpng')
-
-% shading interp
-% % shading flat
-
-'done'
-
-%% both
-% clf; clc
-% 
-% flNameFig = sprintf('HS_extract_both.png');
-% 
-% % figure
-% clr = 'rkc';
-% % for iLoc = 1:numel(location)
-% 
-% [xx,yy] = meshgrid(1:3, 1:4);
-% 
-% fx1= -50; 
-% fx2= 13.58;
-% 
-% % subplot(121)
-% data11 = squeeze(n2o_avg_vol_time_uncorrected(1,:,:));
-% ax11 = axes;
-% surf(ax11,xx,yy,squeeze(data11), 'FaceColor', 'interp', 'EdgeColor','none',...
-%                                  'FaceAlpha', 0.7);
-% cl11 = clim(ax11);
-% mean11 = mean(cl11);
-% 
-% view(fx1,fx2)
-% cbh = colorbar;
-% cbh.Ticks = linspace(cl11(1),cl11(2),7);
-% cbh.TickLabels = sprintf('%.3f\n',cbh.Ticks' - mean11);
-% 
-% 
-% data1 = squeeze(n2o_avg_vol_time(1,:,:));
-% ax1 = axes;
-% surf(ax1,xx,yy,squeeze(data1), 'FaceColor', 'interp', 'EdgeColor','none',...
-%                                'FaceAlpha', 0.7);
-% cl1 = clim(ax1);
-% mean1 = mean(cl1);
-% view(fx1,fx2)
-% clim(ax1,cl11-mean11+mean1)
-% axis off
-% 
-% 
-% data22 = squeeze(n2o_avg_vol_time_uncorrected(2,:,:));
-% ax22 = axes;
-% surf(ax22,xx,yy,squeeze(data22), 'FaceColor', 'interp', 'EdgeColor', 'none', 'FaceAlpha', 0.8);
-% cl22 = clim(ax22);
-% mean22 = mean(cl22);
-% view(fx1,fx2)
-% clim(ax22,cl11-mean11+mean22)
-% axis off
-% 
-% 
-% data2 = squeeze(n2o_avg_vol_time(2,:,:));
-% ax2 = axes;
-% surf(ax2,xx,yy,squeeze(data2), 'FaceColor', 'interp', 'EdgeColor', 'none', 'FaceAlpha', 0.8);
-% cl2 = clim(ax2);
-% mean2 = mean(cl2);
-% view(fx1,fx2)
-% clim(ax2,cl11-mean11+mean2)
-% axis off
-% 
-% 
-% data33 = squeeze(n2o_avg_vol_time_uncorrected(3,:,:));
-% ax33 = axes;
-% surf(ax33,xx,yy,squeeze(data33), 'FaceColor', 'interp', 'EdgeColor', 'none', 'FaceAlpha', 0.8);
-% cl33 = clim(ax33);
-% mean33 = mean(cl33);
-% view(fx1,fx2)
-% clim(ax33,cl11-mean11+mean33)
-% axis off
-% 
-% 
-% 
-% data3 = squeeze(n2o_avg_vol_time(3,:,:));
-% ax3 = axes;
-% surf(ax3,xx,yy,data3, 'FaceColor', 'interp', 'EdgeColor', 'none', 'FaceAlpha', 0.8);
-% cl3 = clim(ax3);
-% mean3 = mean(cl3);
-% view(fx1,fx2)
-% clim(ax3,cl11-mean11+mean3)
-% axis off
-% 
-% 
-% data4 = squeeze(n2o_atm_avg_vol_time(3,:,:));
-% ax4 = axes;
-% surf(ax4,xx,yy,data4, 'FaceColor', 'k', 'EdgeColor', 'none', 'FaceAlpha', 0.1);
-% cl4 = clim(ax4);
-% mean4 = mean(cl4);
-% view(fx1,fx2)
-% clim(ax4,cl11-mean11+mean4)
-% axis off
-% 
-% ax1.Position = ax11.Position;
-% ax22.Position = ax11.Position;
-% ax2.Position = ax11.Position;
-% ax33.Position = ax11.Position;
-% ax3.Position = ax11.Position;
-% ax4.Position = ax11.Position;
-% 
-% ax1.Color = 'none'; % set the background color for ax2 to transparent
-% ax2.Color = 'none'; % set the background color for ax2 to transparent
-% ax3.Color = 'none'; % set the background color for ax2 to transparent
-% ax4.Color = 'none'; % set the background color for ax2 to transparent
-% 
-% colmap = 'jet';
-% colormap(ax11,colmap); %colorbar; % change the color of s1
-% colormap(ax1,colmap); %colorbar; % change the color of s1
-% colormap(ax2,colmap); % change the color of s2
-% colormap(ax22,colmap); % change the color of s2colormap(ax2,colmap); % change the color of s2
-% colormap(ax3,colmap); % change the color of s2
-% colormap(ax33,colmap); % change the color of s2
-% colormap(ax4,colmap); % change the color of s2
-% 
-% linkaxes([ax11 ax22 ax33 ax1 ax2 ax3 ax4])
-% 
-% xlabel('shake time [min]'); xlim([0.7 3.3])
-% ylabel('volume [ml]'); ylim([0.7 4.3])
-% zlabel('N_2O [ug N/L]'); zlim([0.2 2])
-% 
-% ax11.XTick = 1:3; ax11.XTickLabel = num2cell(shakeTime);
-% ax11.YTick = 1:4; ax11.YTickLabel = num2cell(bottleSize);
-% 
-% xlabel(ax11,'Shake time [min]')
-% ylabel(ax11,'Volume [ml]')
-% zlabel(ax11,'N_2O [μg N/l]')
-% set(ax11,'fontSize',14)
-% 
-% fig = gcf;
-% fig.Units = 'inches';
-% fig.PaperPosition = [0 0 7 8];
-% 
-% print(fig,flNameFig,'-dpng')
-% 
-% % shading interp
-% % % shading flat
-% 
-% 'done'
+    print(fig, flNameFig, '-dpng')
+end
 
 %%
+% [inertGas location bottleSize shakeTime]
+indBottleSize = 1:4; %[10 25 72 158]
+iShakeTime = 1:3; %[3 5 8]
 clf
 
-data11 = squeeze(n2o_avg_vol_time_uncorrected(1,:,:));
-data1 = squeeze(n2o_avg_vol_time(1,:,:));
-data22 = squeeze(n2o_avg_vol_time_uncorrected(2,:,:));
-data2 = squeeze(n2o_avg_vol_time(2,:,:));
-data33 = squeeze(n2o_avg_vol_time_uncorrected(3,:,:));
-data3 = squeeze(n2o_avg_vol_time(3,:,:));
-data4 = squeeze(n2o_atm_avg_vol_time(3,:,:));
+dataRR_N2 = squeeze(n2o_avg_vol_time(1,1,indBottleSize,iShakeTime));
+dataRR_HE = squeeze(n2o_avg_vol_time(2,1,indBottleSize,iShakeTime));
+dataW3_N2 = squeeze(n2o_avg_vol_time(1,2,indBottleSize,iShakeTime));
+dataW3_HE = squeeze(n2o_avg_vol_time(2,2,indBottleSize,iShakeTime));
+dataW4_N2 = squeeze(n2o_avg_vol_time(1,3,indBottleSize,iShakeTime));
+dataW4_HE = squeeze(n2o_avg_vol_time(2,3,indBottleSize,iShakeTime));
 
-boxplot([data11(:) data1(:) data22(:) data2(:) data3(:) data33(:)])
+boxplot([dataRR_N2(:) dataRR_HE(:) dataW3_N2(:) dataW3_HE(:) dataW4_HE(:) dataW4_N2(:)])
 hold on;
 
 plot([0 7],[mean(n2o_atm_avg_vol_time(:)) mean(n2o_atm_avg_vol_time(:))])
 
 yl = ylim;
-text(1,mean(n2o_atm_avg_vol_time(:))+0.02*diff(yl),'ATM','fontsize',14)
-text([1:6]-0.5,min([data11(:) data1(:) data22(:) data2(:) data3(:) data33(:)]-0.01*diff(yl)),...
-    {'uncorrected','valve-corrected','uncorrected','valve-corrected','uncorrected','valve-corrected'},...
-    'fontsize',10)
+% text(1,mean(n2o_atm_avg_vol_time(:))+0.02*diff(yl),'fontsize',14)
+text([1:6]-0.4,mean([dataRR_N2(:) dataRR_HE(:) dataW3_N2(:) dataW3_HE(:) dataW4_HE(:) dataW4_N2(:)]-0.01*diff(yl)),...
+    {'N_2','He','N_2','He','N_2','He',},'fontsize',14)
 
                         
 ylabel('N_2O [ug N/L]')
@@ -457,6 +242,6 @@ ax.FontSize = 14;
 
 fig = gcf;
 fig.Units = 'inches';
-    fig.PaperPosition = [0 0 7 8];
-    flNameFig = sprintf('HS_extract_box.png');
-    print(fig,flNameFig,'-dpng')
+fig.PaperPosition = [0 0 7 8];
+flNameFig = sprintf('He_N2_comparision.png');
+print(fig,flNameFig,'-dpng')

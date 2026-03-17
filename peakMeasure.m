@@ -99,6 +99,10 @@ plot([x_time(ind_peak) x_time(ind_peak)],[baseLevel y_hz_(ind_peak)],'c','linewi
 scatter(x_time(ind_peak),y_hz_(ind_peak),100,'r_','linewidth',3)
 
 
+% scatter(x_time(ind_base_start),y_hz_(ind_base_start),100,'r_','linewidth',3)
+% scatter(x_time(ind_base_end),y_hz_(ind_base_end),100,'r_','linewidth',3)
+
+
 txt = sprintf('base: %.4f',baseLevel);
 text(x_time(ind_peak),baseLevel-peakH*0.1,txt)
 

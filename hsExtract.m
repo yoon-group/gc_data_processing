@@ -13,15 +13,15 @@ clear all; clc; clf
 %  (text 1)_(text 2)_(text 3)_(text 4)_(text 5).CSV
 % 
 %  where: 
-%       text 1: location (e.g. RISE)
-%       text 2: sampling date (e.g. 20241004)
-%       text 3: tripcliate index (e.g. 3) OR ATM (e.g. ATM)
-%       text 4: dilution factor (e.g. 2DF). If not diluted, skip.
-%       text 5: temperature (e.g. 24.9T)
+%       text 1: location (e.g., RR, W3, W4)
+%       text 2: sampling volume (e.g., 10ML, 25ML, 72ML, 158ML)
+%       text 3: inert gas (e.g., N2, HE)
+%       text 4: shaking time (e.g. S3, S5, S8).
+%       text 3: tripcliate index (e.g. 03, 05, 08) 
+%       text 5: temperature (e.g. T24.9)
 % 
-% An example:
-% 
-%       RISE_20241004_60ML_8MIN_3_2DF_24.9T.CSV
+% example:
+%       RR_72ML_HE_S3_01_T22.9.CSV
 % 
 % A user should provide the value of volumes of aqueous phase (Vaq) and gas 
 % phase (Vg) in the HS protocol. If not provided this code assumes as:
@@ -60,25 +60,22 @@ clear all; clc; clf
 % Detector (ECD) according to gas type to be detected. For N2O, our GC
 % works with:
 %           
-    expcted_arrival_time = 1.8; % [min] 
+    expcted_arrival_time = 1.9; % [min] 
 %
 % Once run, the saved result file will be used to identify new data
 % which have not been analyzed, and do the additional anaysis only for the
 % new data. 
 % =========================================================================
-%% spurious samples
-
-
 %% directory setting
-dir_.archive = sprintf('/home/public/gcData/');
+dir_.data = sprintf('/home/public/gcData/hsExtract/Mar2026/'); % data folder
 
-dir_.results = sprintf('%s/processed_hsExtract/',pwd);
+dir_.results = sprintf('%s/processed_hsExtract/',pwd); % where to save results
 if ~exist(dir_.results,'dir'); mkdir(dir_.results); end
 
-dir_.fig = [dir_.results 'fig/sample/']; 
+dir_.fig = [dir_.results 'fig/sample/']; % where to save figures
 if ~exist(dir_.fig,'dir'); mkdir(dir_.fig); end
 
-dir_.data = sprintf('%shsExtract/',dir_.archive);
+
 
 %% output file name
 flNameOut = sprintf('%ssample.mat',dir_.results);
@@ -100,58 +97,51 @@ if exist(flNameOut,'file')
 end
 nSample = length(flNameList);
 
-%% location, sample date, temperature, dilution factor, triplicate index
+
+%% location, temperature, triplicate index, shaking time
+inertGasOption = {'N2','HE'};
+locationOption = {'RR','W3','W4'};
+
 location = cell(nSample,1);
+inertGas = cell(nSample,1);
 ind_triplicate = nan(nSample,1);
-dilutionFactor = ones(nSample,1);
 tempK = nan(nSample,1);
 bottleSize = nan(nSample,1);
 shakeTime = nan(nSample,1);
-suspicious = false(nSample,1);
+
 for iSample = 1:nSample
 
     note = textscan(flNameList{iSample}(1:end-4), '%s','delimiter','_' ); 
     note = note{1};
 
     location{iSample} = note{1};
-    sampleDate(iSample,1) = datetime(note{2},'InputFormat','yyyyMMdd','TimeZone','local');
+    inertGas{iSample} = note{3};
     
-    if numel(note)>2 
-        for iText = 3:numel(note)
-            if ~contains(upper(note{iText}),'ATM')
-                if ~isempty(str2num(note{iText}))
-                    ind_triplicate(iSample) = str2num(note{iText});
-                end
-                
-            end
-
-            if contains(upper(note{iText}),'SUSPICIOUS')
-                suspicious(iSample) = true;
-            end
-            if contains(upper(note{iText}),'DF')
-                dilutionFactor(iSample) = str2num(erase(note{iText},'DF'));
-            end
-            if contains(upper(note{iText}),'T')
-                tempK(iSample) = str2num(erase(note{iText},'T')) + 273.15;
-            end
-            if contains(upper(note{iText}),'MIN')
-                shakeTime(iSample) = str2num(erase(note{iText},'MIN'));
-            end
-            if contains(upper(note{iText}),'ML')
-                tmp = str2num(erase(note{iText},'ML'));
-                switch tmp
-                    case 150
-                        bottleSize(iSample) = 157;
-                    case 60
-                        bottleSize(iSample) = 70;
-                    case 20
-                        bottleSize(iSample) = 24;
-                    case 7.5
-                        bottleSize(iSample) = 7.84;
-                end
-            end
+    
+    for iText = 1:numel(note)
+        if ismember(upper(note{iText}),locationOption) % location
+            location{iSample} = upper(note{iText});
+        end
+        if contains(upper(note{iText}),'ML') % bottle volume
+            bottleSize(iSample) = str2num(erase(note{iText},'ML'));
+        end
+        if ismember(upper(note{iText}),inertGasOption) % inertGas
+            inertGas{iSample} = upper(note{iText});
+        end
+        if contains(upper(note{iText}),'S') % shaking time
+            shakeTime(iSample) = str2num(erase(note{iText},'S'));
+        end
+        if contains(upper(note{iText}),'T') % temperature
+            tempK(iSample) = str2num(erase(note{iText},'T')) + 273.15;
+        end
+        if ~isempty(str2num(note{iText})) % triplicate index
+            ind_triplicate(iSample) = str2num(note{iText});
+        end
+        if ~contains(upper(note{iText}),'ATM')
+            
         end
     end
+
 end
 
 %% peak measuring
@@ -162,54 +152,10 @@ for iSample = 1:length(flNameList)
     fprintf('  completed \n')
 end
 
-%% load calibration data 
-flNameSTD = sprintf('%s/processed/STD.mat',pwd);
-load(flNameSTD,'T_STD','slope','offset')
-
-%% N2O concentration estimation
-bottleVol = bottleSize/1000; %[L]
-Vaq = bottleVol*9/10; %[L] 
-Vg =  bottleVol*1/10; %[L] 
-valveVol = 3/1000; %[L]
-n2o_ppm_atm = 340/1000; %[ppm]
-
-% Vaq = 0.54; Vg = 0.06; % [L] depending on your HS protocol
-
-if nSample 
-    logK0 = A + (B./tempK) + C*(log(tempK));
-    K0 = exp(logK0); % Henry's law constant [mol/L/atm]
-    
-    n2o_ppm_measured = (peakH*slope + offset).*dilutionFactor;
-    
-    n2o_ppm = (n2o_ppm_measured .* (Vg+valveVol) - (valveVol*n2o_ppm_atm))./Vg;
-
-
-    n2o_atm = n2o_ppm * 1e-6; % Fractional concentration of N2O in the gas 
-                              % phase. By mulitiplying the total pressure 
-                              % of 1 atmospheres (atm), the value also 
-                              % expresses a partial pressure [atm].
-                              % (Henry's law: naq/Vaq = KO * n2o_atm)
-    
-    ng = (n2o_atm .* Vg)./(R*tempK); % N2O moles in gas phase (from ideal gas law)
-    naq = K0.*n2o_atm.*Vaq; % dissolved N2O moles in aqueous phase (from Henry's law)
-    
-    n2o_mol_L = (ng+naq)./Vaq; % Total N2O concentration in mol/L
-    n2o_nmol_L = n2o_mol_L * 1e+9;
-    n2o_umol_L = n2o_mol_L * 1e+6;
-    
-    n2o_ng_L = n2o_nmol_L * amuN2O;
-    n2o_ug_L = n2o_umol_L * amuN2O;
-    
-    n2o_molN_L = n2o_mol_L * 2;
-    n2o_gN_L = n2o_molN_L * amuN;
-    n2o_mgN_L = n2o_gN_L * 1e+3;
-    n2o_ugN_L = n2o_mgN_L * 1e+3;
-end
-
 %% add newly processed data & save
 if nSample
-    T_new = table(flNameList,location,suspicious,bottleSize,shakeTime,ind_triplicate,...
-        dilutionFactor,tempK,peakH,n2o_ppm,n2o_molN_L,n2o_ugN_L,sampleDate);
+    T_new = table(flNameList,inertGas,location,bottleSize,shakeTime,ind_triplicate,...
+        tempK,peakH);
     if ~exist('T_sample','var')
         T_sample = T_new;    
     else

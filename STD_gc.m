@@ -20,28 +20,25 @@ clear all; clc; clf
 % Detector (ECD) according to gas type to be detected. For N2O, our GC
 % works well with:
 %           
-        expected_arrival_time = 1.8; % [min] 
-% 
+        expected_arrival_time = 1.9; % [min] 
 % The user should also provide manufactured N2O gas stock concentration: 
 % 
         stock = 0.97; %[ppm]
 %
-% Once run, the saved result file will be used to identify new data
+% Once run, the saved result file will be used to identify new 
 % which have not been analyzed, and do the additional anaysis only for the
 % new data. 
 % 
 % =========================================================================
-
 %% directory setting
-dir_.archive = sprintf('/home/public/gcData/');
+dir_.data = sprintf('/home/public/gcData/STD/Feb2026/'); % data folder
 
-dir_.results = sprintf('%s/processed/',pwd);
+dir_.results = sprintf('%s/processed_STD/',pwd); % where to save results
 if ~exist(dir_.results,'dir'); mkdir(dir_.results); end
 
-dir_.fig = [dir_.results 'fig/STD/']; 
+dir_.fig = [dir_.results 'fig/']; % where to save figures
 if ~exist(dir_.fig,'dir'); mkdir(dir_.fig); end
 
-dir_.data = sprintf('%sSTD/',dir_.archive);
 
 %% output file name
 flNameOut = sprintf('%sSTD.mat',dir_.results);
@@ -57,10 +54,10 @@ for il = 3:numel(flNameStruct)
 end
 
 %% Identify unanalyzed files
-if exist(flNameOut,'file')
-    load(flNameOut,'T_STD');
-    flNameList = setdiff(flNameList,T_STD.flNameList);
-end
+% if exist(flNameOut,'file')
+%     load(flNameOut,'T_STD');
+%     flNameList = setdiff(flNameList,T_STD.flNameList);
+% end
 
 nSample = length(flNameList);
 %% result variables 
@@ -99,7 +96,7 @@ p = polyfit(T_STD.peakH,T_STD.cnc,1);
 slope = p(1);
 offset = p(2);
     
-% save(flNameOut,'T_STD','slope','offset')
+save(flNameOut,'T_STD','slope','offset')
 
 %% calibration curve figures ==============================================
 peakH = T_STD.peakH;
@@ -119,6 +116,7 @@ plot(peakH,slope*peakH+offset,'-'); hold on
 scatter(peakH,cnc,'o')
 
 ylim([-0.1 1.1])
+xlim([0 160])
 xl = xlim; yl = ylim;
 text(xl(1)+diff(xl)/10,yl(2)-diff(yl)/10,sprintf('y = (%.4e) * x + (%.4e)',slope,offset),'FontSize',14)
 text(xl(1)+diff(xl)/10,yl(2)-diff(yl)/10*2,sprintf('R^2 = %.4f',R2),'FontSize',14)
