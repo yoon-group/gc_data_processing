@@ -1,4 +1,48 @@
 clear all; clc; clf
+%% ========================================================================
+% 
+%                   Head-space gas sample processing
+% 
+%                                                      Yoon Research Group
+% -------------------------------------------------------------------------
+% This code estimates N2O concentration of a gas sample collected from
+% head-space (HS) gas extraction method. 
+% 
+% First run hsExtract.m to collect peak height values from all GC scans.
+% 
+% A user should provide the value of volumes of aqueous phase (Vaq) and gas 
+% phase (Vg) in the HS protocol. If not provided this code assumes as:
+% 
+    % Vaq : Vg = 9 : 1 
+% 
+% This code uses the following empirical constants for calculating the 
+% Henry's law for N2O (Sander et a., 2006, JPL-Publ-06-2, NASA Technical 
+% Reports Server, https://ntrs.nasa.gov/citations/20090033862)
+% 
+    A = -148.1; B = 8610; C = 20.266; 
+% 
+% These constants describe solubility equilibrium between the gas phase and 
+% the aqueous phase as a function of temperature. The specific formula used
+% is:
+% 
+%       logK0 = A + B / tempK + C * log(tempK)
+%
+% where tempK is the temperature in Kelvin. The values of A, B, and C are
+% specific to N2O.  
+% 
+% The universal gas constant is given as:
+% 
+    R = 0.0821; %[L*atm/K/mol]
+% 
+% Atomic mass units of nitrogen N, O, and N2O [amu] are given as:
+% 
+    amuN = 14.0067; 
+    amuO = 16;
+    amuN2O = 2*amuN + amuO;
+% =========================================================================
+%% load standard sample data and calibration curves
+flNameSTD = sprintf('%s/processed_STD/STD.mat',pwd);
+load(flNameSTD,'T_STD','slope','offset')
 
 
 %% load sample data
@@ -11,17 +55,7 @@ location = {'RR','W3','W4'};
 bottleSize = [10 25 72 158]; %[mL]
 shakeTime = [3 5 8]; %[min]
 
-%% load standard sample data and calibration curves
-flNameSTD = sprintf('%s/processed/STD.mat',pwd);
-load(flNameSTD,'T_STD','slope','offset')
-%% ========================================================================
-clc
-A = -148.1; B = 8610; C = 20.266; 
-R = 0.0821; %[L*atm/K/mol]
-amuN = 14.0067; 
-amuO = 16;
-amuN2O = 2*amuN + amuO;
-% 
+%% ======================================================================== 
 tempK = T_sample.tempK;
 peakH = T_sample.peakH;
 
