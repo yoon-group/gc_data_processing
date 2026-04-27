@@ -26,6 +26,7 @@ clear all; clc; clf
 % Detector (ECD) according to gas type to be detected. For N2O, our GC
 % works with:
 %           
+    expcted_arrival_time_min  = 1.89;% [min] 
     expcted_arrival_time = 1.9; % [min] 
 %
 % Once run, the saved result file will be used to identify new data
@@ -33,12 +34,12 @@ clear all; clc; clf
 % new data. 
 % =========================================================================
 %% directory setting
-dir_.data = sprintf('/home/public/gcData/hsExtract/Mar2026/'); % data folder
+dir_.data = sprintf('/home/public/gcData/hsExtract/Apr2026/'); % data folder
 
-dir_.results = sprintf('%s/processed_hsExtract/',pwd); % where to save results
+dir_.results = sprintf('%s/processed_hsExtract/Apr2026/',pwd); % where to save results
 if ~exist(dir_.results,'dir'); mkdir(dir_.results); end
 
-dir_.fig = [dir_.results 'fig/sample/']; % where to save figures
+dir_.fig = [dir_.results 'fig/']; % where to save figures
 if ~exist(dir_.fig,'dir'); mkdir(dir_.fig); end
 
 
@@ -57,71 +58,29 @@ for il = 3:numel(flNameStruct)
 end
 
 %% Identify unanalyzed files
-if exist(flNameOut,'file')
-    load(flNameOut,'T_sample');
-    flNameList = setdiff(flNameList,T_sample.flNameList);
-end
+% if exist(flNameOut,'file')
+%     load(flNameOut,'T_sample');
+%     flNameList = setdiff(flNameList,T_sample.flNameList);
+% end
 nSample = length(flNameList);
 
-
-%% location, temperature, triplicate index, shaking time
-inertGasOption = {'N2','HE'};
-locationOption = {'RR','W3','W4'};
-
-location = cell(nSample,1);
-inertGas = cell(nSample,1);
-ind_triplicate = nan(nSample,1);
-tempK = nan(nSample,1);
-bottleSize = nan(nSample,1);
-shakeTime = nan(nSample,1);
-
-for iSample = 1:nSample
-
-    note = textscan(flNameList{iSample}(1:end-4), '%s','delimiter','_' ); 
-    note = note{1};
-
-    location{iSample} = note{1};
-    inertGas{iSample} = note{3};
-    
-    
-    for iText = 1:numel(note)
-        if ismember(upper(note{iText}),locationOption) % location
-            location{iSample} = upper(note{iText});
-        end
-        if contains(upper(note{iText}),'ML') % bottle volume
-            bottleSize(iSample) = str2num(erase(note{iText},'ML'));
-        end
-        if ismember(upper(note{iText}),inertGasOption) % inertGas
-            inertGas{iSample} = upper(note{iText});
-        end
-        if contains(upper(note{iText}),'S') % shaking time
-            shakeTime(iSample) = str2num(erase(note{iText},'S'));
-        end
-        if contains(upper(note{iText}),'T') % temperature
-            tempK(iSample) = str2num(erase(note{iText},'T')) + 273.15;
-        end
-        if ~isempty(str2num(note{iText})) % triplicate index
-            ind_triplicate(iSample) = str2num(note{iText});
-        end
-        if ~contains(upper(note{iText}),'ATM')
-            
-        end
-    end
-
-end
-
 %% peak measuring
+% expcted_arrival_time_min  = 1.875;% [min] 
 peakH = nan(nSample,1);
+peakT = nan(nSample,1);
 for iSample = 1:length(flNameList)
     fprintf('(%d/%d) %s --> processing -->',iSample,length(flNameList),flNameList{iSample}(1:end-4))
-    peakH(iSample) = peakMeasure(flNameList{iSample},expcted_arrival_time,dir_);    
+    [peakH(iSample), peakT(iSample)] =peakMeasure(flNameList{iSample},...
+                                        expcted_arrival_time_min,...
+                                        expcted_arrival_time,dir_);    
     fprintf('  completed \n')
 end
 
 %% add newly processed data & save
 if nSample
-    T_new = table(flNameList,inertGas,location,bottleSize,shakeTime,ind_triplicate,...
-        tempK,peakH);
+    % T_new = table(flNameList,inertGas,location,bottleSize,shakeTime,ind_triplicate,...
+    %     tempK,peakH);
+    T_new = table(flNameList,peakT,peakH);
     if ~exist('T_sample','var')
         T_sample = T_new;    
     else
@@ -134,3 +93,5 @@ else
 end
 
 %%
+tmp = T_sample.peakT;
+min(tmp(tmp>1.85))
