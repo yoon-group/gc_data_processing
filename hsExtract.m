@@ -28,15 +28,16 @@ clear all; clc; clf
 %           
     expcted_arrival_time_min  = 1.89;% [min] 
     expcted_arrival_time = 1.9; % [min] 
+    expcted_arrival_time_max = 1.91; % [min] 
 %
 % Once run, the saved result file will be used to identify new data
 % which have not been analyzed, and do the additional anaysis only for the
 % new data. 
 % =========================================================================
 %% directory setting
-dir_.data = sprintf('/home/public/gcData/hsExtract/Apr2026/'); % data folder
+dir_.data = sprintf('/home/public/gcData/hsExtract/Apr2026-test/'); % data folder
 
-dir_.results = sprintf('%s/processed_hsExtract/Apr2026/',pwd); % where to save results
+dir_.results = sprintf('%s/processed_hsExtract/Apr2026-test/',pwd); % where to save results
 if ~exist(dir_.results,'dir'); mkdir(dir_.results); end
 
 dir_.fig = [dir_.results 'fig/']; % where to save figures
@@ -72,7 +73,8 @@ for iSample = 1:length(flNameList)
     fprintf('(%d/%d) %s --> processing -->',iSample,length(flNameList),flNameList{iSample}(1:end-4))
     [peakH(iSample), peakT(iSample)] =peakMeasure(flNameList{iSample},...
                                         expcted_arrival_time_min,...
-                                        expcted_arrival_time,dir_);    
+                                        expcted_arrival_time,...
+                                        expcted_arrival_time_max,dir_);    
     fprintf('  completed \n')
 end
 
