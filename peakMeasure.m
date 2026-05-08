@@ -21,9 +21,10 @@ function [peakH,peakT] = peakMeasure(varargin)
 % The code produces a figure showing the base , peak location & height.
 % =========================================================================
 %% input variables
-expected_arrival_time     = [];
+expected_arrival_times     = [];
 expected_arrival_time_min = [];
 
+iTime = 0;
 for iArg = 1:nargin
     if isstruct(varargin{iArg})
         dir_ = varargin{iArg};
@@ -32,22 +33,19 @@ for iArg = 1:nargin
         flName = varargin{iArg};
 
     elseif isnumeric(varargin{iArg})
+        iTime = iTime + 1;
         val = varargin{iArg};
 
-        if isempty(expected_arrival_time_min)
-            expected_arrival_time_min = val;
-
-        elseif isempty(expected_arrival_time)
-            expected_arrival_time = val;
-        end
+        expected_arrival_times(iTime) = varargin{iArg};
     end
 end
 % ensure ordering
-if expected_arrival_time_min > expected_arrival_time
-    tmp = expected_arrival_time_min;
-    expected_arrival_time_min = expected_arrival_time;
-    expected_arrival_time     = tmp;
-end
+expected_arrival_times = sort(expected_arrival_times);
+
+expected_arrival_time_min = expected_arrival_times(1);
+expected_arrival_time = expected_arrival_times(2);
+expected_arrival_time_max = expected_arrival_times(3);
+
 
 %% load GC data 
 fidDataFl = fopen([dir_.data flName],'r');
@@ -94,10 +92,9 @@ peakH = y_hz_(ind_peak)-baseLevel;
 peakT = x_time(ind_peak);
 
 
-if peakT < expected_arrival_time_min %expected_arrival_time
-    ind_localMin_left = find(x_time > expected_arrival_time_min);
-    ind_curve = ind_localMin_left(1):ind_localMin_right(1); % indices for the target curve
-
+if peakT < expected_arrival_time_min || peakT > expected_arrival_time_max
+    ind_curve = find(x_time > expected_arrival_time_min & x_time < expected_arrival_time_max);
+    
     [~,i]=max(y_hz_(ind_curve));
 
     ind_peak = ind_curve(i); % peak index
@@ -111,10 +108,16 @@ clf;
 
 xlSpan = (x_time(ind_peak) - x_time(ind_base_start))*1.2;
 xl = [1.55 2.25];%[-xlSpan xlSpan] + x_time(ind_peak);
-yl = [baseLevel y_hz_(ind_peak)] +[-peakH peakH];
+yl = sort([baseLevel y_hz_(ind_peak)]) +[-abs(peakH) abs(peakH)];
 
 subplot(121)
 plot(x_time,y_hz,'-','linewidth',1); hold on;
+
+
+plot([x_time(ind_base_start) x_time(ind_peak+unitDataLength)],...
+    [baseLevel baseLevel],'r:','linewidth',2);
+
+scatter(x_time(ind_peak),y_hz_(ind_peak),100,'r_','linewidth',3)
 
 title(sprintf('%s',flName(1:end-4)),'Interpreter','none')
 
