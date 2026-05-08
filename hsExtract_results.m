@@ -147,7 +147,7 @@ Vaq(isRatio_441) = bottleVol(isRatio_441)*1/5.4; %[L]
 Vg(isRatio_441) =  bottleVol(isRatio_441)*4.4/5.4; %[L] 
 
 
-valveVol = 3/1000; %[L]
+valveVol = 0.3/1000; %[L]
 % n2o_ppm_valve = 0/1000; %[ppm]
 
 logK0 = A + (B./tempK) + C*(log(tempK));
@@ -234,97 +234,97 @@ end
 % writetable(T_sample,'HS_extract.xlsx')
 
 %% plot mean N2O for location * volume * shaking time
-clf; clc
-
-[xx,yy] = meshgrid(1:3, 1:4);
-az = -80;
-el = 15;
-
-for iGas = 1:2
-    clf
-
-    fig = gcf;
-    fig.Units = 'inches';
-    fig.PaperPosition = [0 0 7 8];
-
-    flNameFig = sprintf('HS_extract_%s.png', inertGas{iGas});
-
-    %-----------------------------
-    % Data
-    %-----------------------------
-    data = squeeze(n2o_avg_loc_vol_ratio_sht_stt(iGas,1:3,:,:));   % 3 x 4 x 3
-    alphaVals = [1 0.8 0.8];
-
-    % Center each plane by its own mean for coloring
-    cdata = zeros(size(data));
-    for k = 1:3
-        cdata(k,:,:) = data(k,:,:) - mean(data(k,:,:), 'all');
-    end
-
-    clim_common = max(abs(cdata(:))) * [-1 1];
-
-    %-----------------------------
-    % Plot
-    %-----------------------------
-    ax = axes;
-    hold(ax,'on')
-
-    for k = 1:3
-        surf(ax, xx, yy, squeeze(data(k,:,:)), squeeze(cdata(k,:,:)), ...
-            'FaceColor','interp', ...
-            'EdgeColor','none', ...
-            'FaceAlpha',alphaVals(k));
-    end
-
-    view(ax, az, el)
-    colormap(ax, jet)
-    clim(ax, clim_common)
-
-    xlim(ax,[0.7 3.3])
-    ylim(ax,[0.7 4.3])
-
-    ax.XTick = 1:3;
-    ax.XTickLabel = string(shakeTime);
-    ax.YTick = 1:4;
-    ax.YTickLabel = string(bottleSize);
-    ax.FontSize = 14;
-    ax.Position = [0.12 0.12 0.62 0.78];
-
-    ylabel(ax,'Volume [ml]')
-    zlabel(ax,'N_2O [\mug N/L]')
-    title(ax, sprintf('Inert Gas: %s', inertGas{iGas}), 'FontSize', 16)
-
-    box(ax,'on')
-    grid(ax,'on')
-
-    %-----------------------------
-    % Colorbar
-    %-----------------------------
-    cbh = colorbar(ax, 'eastoutside');
-    cbh.Position = [0.85 0.20 0.025 0.70];
-    cbh.Ticks = linspace(clim_common(1), clim_common(2), 7);
-    cbh.TickLabels = compose('%.3f', cbh.Ticks);
-
-    %-----------------------------
-    % Custom x-label as rotated text
-    %-----------------------------
-    drawnow
-    xl = xlim(ax);
-    yl = ylim(ax);
-    zl = zlim(ax);
-
-    text(ax, mean(xl), yl(1) - 0.10*range(yl), zl(1), 'Shake time [min]', ...
-        'HorizontalAlignment','center', ...
-        'VerticalAlignment','top', ...
-        'FontSize',14, ...
-        'Rotation', -(az + 13));
-
-    print(fig, flNameFig, '-dpng')
-end
+% clf; clc
+% 
+% [xx,yy] = meshgrid(1:3, 1:4);
+% az = -80;
+% el = 15;
+% 
+% for iGas = 1:2
+%     clf
+% 
+%     fig = gcf;
+%     fig.Units = 'inches';
+%     fig.PaperPosition = [0 0 7 8];
+% 
+%     flNameFig = sprintf('HS_extract_%s.png', inertGas{iGas});
+% 
+%     %-----------------------------
+%     % Data
+%     %-----------------------------
+%     data = squeeze(n2o_avg_loc_vol_ratio_sht_stt(iGas,1:3,:,:));   % 3 x 4 x 3
+%     alphaVals = [1 0.8 0.8];
+% 
+%     % Center each plane by its own mean for coloring
+%     cdata = zeros(size(data));
+%     for k = 1:3
+%         cdata(k,:,:) = data(k,:,:) - mean(data(k,:,:), 'all');
+%     end
+% 
+%     clim_common = max(abs(cdata(:))) * [-1 1];
+% 
+%     %-----------------------------
+%     % Plot
+%     %-----------------------------
+%     ax = axes;
+%     hold(ax,'on')
+% 
+%     for k = 1:3
+%         surf(ax, xx, yy, squeeze(data(k,:,:)), squeeze(cdata(k,:,:)), ...
+%             'FaceColor','interp', ...
+%             'EdgeColor','none', ...
+%             'FaceAlpha',alphaVals(k));
+%     end
+% 
+%     view(ax, az, el)
+%     colormap(ax, jet)
+%     clim(ax, clim_common)
+% 
+%     xlim(ax,[0.7 3.3])
+%     ylim(ax,[0.7 4.3])
+% 
+%     ax.XTick = 1:3;
+%     ax.XTickLabel = string(shakeTime);
+%     ax.YTick = 1:4;
+%     ax.YTickLabel = string(bottleSize);
+%     ax.FontSize = 14;
+%     ax.Position = [0.12 0.12 0.62 0.78];
+% 
+%     ylabel(ax,'Volume [ml]')
+%     zlabel(ax,'N_2O [\mug N/L]')
+%     title(ax, sprintf('Inert Gas: %s', inertGas{iGas}), 'FontSize', 16)
+% 
+%     box(ax,'on')
+%     grid(ax,'on')
+% 
+%     %-----------------------------
+%     % Colorbar
+%     %-----------------------------
+%     cbh = colorbar(ax, 'eastoutside');
+%     cbh.Position = [0.85 0.20 0.025 0.70];
+%     cbh.Ticks = linspace(clim_common(1), clim_common(2), 7);
+%     cbh.TickLabels = compose('%.3f', cbh.Ticks);
+% 
+%     %-----------------------------
+%     % Custom x-label as rotated text
+%     %-----------------------------
+%     drawnow
+%     xl = xlim(ax);
+%     yl = ylim(ax);
+%     zl = zlim(ax);
+% 
+%     text(ax, mean(xl), yl(1) - 0.10*range(yl), zl(1), 'Shake time [min]', ...
+%         'HorizontalAlignment','center', ...
+%         'VerticalAlignment','top', ...
+%         'FontSize',14, ...
+%         'Rotation', -(az + 13));
+% 
+%     print(fig, flNameFig, '-dpng')
+% end
 
 %% mean
 % (location),(bottleSize),(ratio),(shakingTime),(standingTime)
-
+figure
 clf; clc;
 
 iCase = 0;
@@ -369,7 +369,7 @@ set(gca, 'XTick', [1 2 3 4], ...
          'XTickLabel', bottleSize,...
          'fontSize',16)
 xlim([0.7 4.3])
-ylim([0 4.5])
+ylim([0 4])
 xlabel('bottle size [mL]')
 if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
 title([location{iLoc}])
@@ -463,7 +463,7 @@ set(gca, 'XTick', [10 20 30 40], ...
          'XTickLabel', [],...
          'fontSize',16)
 xlim([5 45])
-ylim([0 4.5])
+ylim([0 4])
 % xlabel('bottle size [mL]')
 if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
 title([location{iLoc}])
@@ -490,7 +490,7 @@ set(gca, 'XTick', [10 20 30 40], ...
          'XTickLabel', bottleSize,...
          'fontSize',16)
 xlim([5 45])
-ylim([0 4.5])
+ylim([0 4])
 xlabel('bottle size [mL]')
 if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
 % title([location{iLoc}])
