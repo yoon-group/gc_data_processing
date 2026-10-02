@@ -69,13 +69,13 @@ clear all; clc; clf
 %% directory setting
 dir_.archive = sprintf('/home/public/gcData/');
 
-dir_.results = sprintf('%s/processed/',pwd);
+dir_.results = sprintf('%s/processed_2025Madison/',pwd);
 if ~exist(dir_.results,'dir'); mkdir(dir_.results); end
 
 dir_.fig = [dir_.results 'fig/sample/']; 
 if ~exist(dir_.fig,'dir'); mkdir(dir_.fig); end
 
-dir_.data = sprintf('%ssample/',dir_.archive);
+dir_.data = sprintf('%ssample/pre_2025/2025/',dir_.archive);
 
 %% output file name
 flNameOut = sprintf('%ssample.mat',dir_.results);
