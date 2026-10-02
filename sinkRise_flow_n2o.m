@@ -55,7 +55,7 @@ dateFieldWork(end+1,1) = datetime('02-21-2025 11:30:00','InputFormat','MM-dd-yyy
 dateFieldWork(find(dateFieldWork<rise.dte(1))) = [];
 %% load sample data
 clc
-flNameSample = sprintf('%s/processed/sample.mat',pwd);
+flNameSample = sprintf('%s/processed_2025Madison/sample.mat',pwd);
 load(flNameSample,'T_sample')
 T_n2o = T_sample; clear T_sample
 
@@ -429,8 +429,10 @@ ylim([-500 500])
 clc
 clf; fntsize = 14;
 
-xl = [rise.dte(1) rise.dte(end)+days(1)];
+% xl = [rise.dte(1) rise.dte(end)+days(1)];
 % xl = [rise.dte(1) rise.dte(end)];
+xl = [datetime('1-15-2025 00:00:00','InputFormat','MM-dd-yyyy HH:mm:ss','TimeZone','local') ... 
+      datetime('2-27-2025 00:00:00','InputFormat','MM-dd-yyyy HH:mm:ss','TimeZone','local')];
 
 [commonDate,iSink,iRise] = intersect(sink.dte,rise.dte);
 
@@ -443,7 +445,7 @@ for i=1:length(dateFieldWork)
     end
 end
 
-nrow = 18;
+nrow = 21;
 h1 = subplot(nrow ,1,1:3);
 
 plot(sink.dte,sink.data,'--k','linewidth',2); hold on
@@ -476,7 +478,7 @@ xl = xlim;
 % ------------------------------------
 h2 = subplot(nrow ,1,4:6);
 plot(commonDate,sink.data(iSink)-rise.data(iRise),'-k','linewidth',2); hold on
-scatter(commonDate(ind),sink.data(iSink(ind))-rise.data(iSink(ind)),200,'r^','linewidth',2)
+% scatter(commonDate(ind),sink.data(iSink(ind))-rise.data(iSink(ind)),200,'r^','linewidth',2)
 ax = gca;
 % xp = [t_tracingStart t_tracingEnd t_tracingEnd t_tracingStart];
 % yp = ax.YLim([1 1 2 2]);  
@@ -520,7 +522,7 @@ ax.XTick = xl(1):days(5):xl(2)
 % xlabel('Time');
 set(gcf,'color','w')
 
-% legend("Sink - Rise","sampling","",location{2:4},'location','northwest')
+legend("Sink - Rise","",location{2:5},'location','northwest')
 % legend box off
 
 set(gca,'fontsize',fntsize)
@@ -618,7 +620,7 @@ set(gca,'fontsize',fntsize,'XTickLabel','')
 set(gca,'fontsize',fntsize)
 
 % ------------------------------------
-subplot(nrow,1,10:12)
+subplot(nrow,1,13:15)
 plot(commonDate,sink.data(iSink)-rise.data(iRise),'-k','linewidth',2); hold on
 ax = gca;
     
@@ -657,45 +659,45 @@ set(gca,'fontsize',fntsize,'XTickLabel','')
 set(gca,'fontsize',fntsize)
 
 % ------------------------------------
-% subplot(nrow,1,13:15)
-% plot(commonDate,sink.data(iSink)-rise.data(iRise),'-k','linewidth',2); hold on
-% ax = gca;
-% 
-% plot([commonDate(1) commonDate(end)],[0 0],'--r'); 
-% 
-% 
-% ylabel('Sink - Rise (ft^3/s)');
-% 
-% yl = ylim;
-% thld = max(abs(yl));
-% ylim([-thld thld])
-% 
-% xlim(xl)
-% 
-% 
-% 
-% yyaxis right
-% 
-% barwdith = 0.1;
-% bar(T_ORP.dateFieldWork+hours(-6),T_ORP.WELL3,barwdith ,'facealpha',0.5,'facecolor','c','edgealpha',1); 
-% bar(T_ORP.dateFieldWork+hours(0),T_ORP.WELL4,barwdith ,'facealpha',0.5,'facecolor','r','edgealpha',1); 
-% bar(T_ORP.dateFieldWork+hours(6),T_ORP.WELL4A,barwdith ,'facealpha',0.5,'facecolor','y','edgealpha',1); 
-% 
-% ylabel('ORP [mv] '); % 1 cfs = 28.3168 liters
-% 
-% ax = gca;
-% 
-% ax.YColor = 'k';
-% 
-% % xlabel('Time');
-% set(gcf,'color','w')
-% set(gca,'fontsize',fntsize,'XTickLabel','')
-% 
-% set(gca,'fontsize',fntsize)
+subplot(nrow,1,10:12)
+plot(commonDate,sink.data(iSink)-rise.data(iRise),'-k','linewidth',2); hold on
+ax = gca;
+
+plot([commonDate(1) commonDate(end)],[0 0],'--r'); 
+
+
+ylabel('Sink - Rise (ft^3/s)');
+
+yl = ylim;
+thld = max(abs(yl));
+ylim([-thld thld])
+
+xlim(xl)
+
+
+
+yyaxis right
+
+barwdith = 0.1;
+bar(T_ORP.dateFieldWork+hours(-6),T_ORP.WELL3,barwdith ,'facealpha',0.5,'facecolor','c','edgealpha',1); 
+bar(T_ORP.dateFieldWork+hours(0),T_ORP.WELL4,barwdith ,'facealpha',0.5,'facecolor','r','edgealpha',1); 
+bar(T_ORP.dateFieldWork+hours(6),T_ORP.WELL4A,barwdith ,'facealpha',0.5,'facecolor','y','edgealpha',1); 
+
+ylabel('ORP [mv] '); % 1 cfs = 28.3168 liters
+
+ax = gca;
+
+ax.YColor = 'k';
+
+% xlabel('Time');
+set(gcf,'color','w')
+set(gca,'fontsize',fntsize,'XTickLabel','')
+
+set(gca,'fontsize',fntsize)
 
 
 % ------------------------------------
-subplot(nrow,1,13:15)
+subplot(nrow,1,16:18)
 plot(commonDate,sink.data(iSink)-rise.data(iRise),'-k','linewidth',2); hold on
 ax = gca;
     
@@ -733,12 +735,12 @@ ax.YColor = 'k';
 
 % xlabel('Time');
 set(gcf,'color','w')
-% set(gca,'fontsize',fntsize,'XTickLabel','')
+set(gca,'fontsize',fntsize,'XTickLabel','')
 
 set(gca,'fontsize',fntsize)
 
 % ------------------------------------
-subplot(nrow,1,16:18)
+subplot(nrow,1,19:21)
 plot(commonDate,sink.data(iSink)-rise.data(iRise),'-k','linewidth',2); hold on
 ax = gca;
     
