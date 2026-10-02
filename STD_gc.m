@@ -35,13 +35,13 @@ clear all; clc; clf
 %% directory setting
 dir_.archive = sprintf('/home/public/gcData/');
 
-dir_.results = sprintf('%s/processed/',pwd);
+dir_.results = sprintf('%s/processed_2025Madison/',pwd);
 if ~exist(dir_.results,'dir'); mkdir(dir_.results); end
 
 dir_.fig = [dir_.results 'fig/STD/']; 
 if ~exist(dir_.fig,'dir'); mkdir(dir_.fig); end
 
-dir_.data = sprintf('%sSTD/',dir_.archive);
+dir_.data = sprintf('%soldSTD_Madison/',dir_.archive);
 
 %% output file name
 flNameOut = sprintf('%sSTD.mat',dir_.results);
@@ -99,7 +99,7 @@ p = polyfit(T_STD.peakH,T_STD.cnc,1);
 slope = p(1);
 offset = p(2);
     
-% save(flNameOut,'T_STD','slope','offset')
+save(flNameOut,'T_STD','slope','offset')
 
 %% calibration curve figures ==============================================
 peakH = T_STD.peakH;
