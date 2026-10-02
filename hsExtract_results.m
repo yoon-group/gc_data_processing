@@ -48,6 +48,15 @@ load(flNameSTD,'T_STD','slope','offset')
 flNameSample = sprintf('%s/processed_hsExtract/Apr2026/sample.mat',pwd);
 load(flNameSample,'T_sample')
 
+T_sample_1 = T_sample; clear T_sample
+
+
+flNameSample = sprintf('%s/processed_hsExtract/June2026/sample.mat',pwd);
+load(flNameSample,'T_sample')
+T_sample_2 = T_sample; clear T_sample
+
+T_sample = [T_sample_1; T_sample_2(1:end-2,:)];
+
 
 %%
 flNameList = T_sample.flNameList;
@@ -76,13 +85,15 @@ T_sample = addvars(T_sample,order,location,bottleSize,ratio,...
 
 T_sample = T_sample(ind,:);
 %% weird sample 
-% #97 from checking fitting figure;
-ind = find(T_sample.order == 97);
-T_sample(ind,:) = [];
+% % #97 from checking fitting figure;
+% 97 220 238 268
 
-% '63_W3_25_19_S5_00_02_T22.9_2ND.CSV' not aligned with other triplicates
-ind = find(contains(T_sample.flNameList,'63_W3_25_19_S5_00_02_T22.9_2ND.CSV'));
-T_sample(ind,:) = [];
+idx = find(ismember(T_sample.order, [ 97 220 238  ...
+    293 294 ...
+    295 296 ...
+    290 292 ]));
+T_sample(idx,:) = [];
+
 
 flNameList = T_sample.flNameList;
 %%
@@ -200,10 +211,18 @@ T_sample.n2o_ugN_L = n2o_ugN_L;
 
 %% data arrangements
 
+
+
 n2o_avg_loc_vol_ratio_sht_stt = nan(numel(location),numel(bottleSize),...
                       numel(ratio),numel(shakingTime),numel(standingTime));
 n2o_std_loc_vol_ratio_sht_stt = n2o_avg_loc_vol_ratio_sht_stt;
+sample_count = n2o_avg_loc_vol_ratio_sht_stt;
 
+% for iLoc = 3%1:numel(location)
+% for iVol = 2%1:numel(bottleSize)
+% for iRat = 2%1:numel(ratio)
+% for iSht = 2%1:numel(shakingTime)
+% for iStt = 2%1:numel(standingTime)
 for iLoc = 1:numel(location)
 for iVol = 1:numel(bottleSize)
 for iRat = 1:numel(ratio)
@@ -216,14 +235,20 @@ for iStt = 1:numel(standingTime)
            & strcmp(T_sample.standingTime,standingTime{iStt}) ...
            ,:).n2o_ugN_L;
    
+    % T_sample(strcmp(T_sample.location,location{iLoc})... 
+    %        & T_sample.bottleSize==str2num(bottleSize{iVol}) ...
+    %        & strcmp(T_sample.ratio,ratio{iRat}) ...
+    %        & strcmp(T_sample.shakingTime,shakingTime{iSht}) ...
+    %                   & strcmp(T_sample.standingTime,standingTime{iStt}) ...
+    %        ,:).order
+    % 
 
     n2o_avg_loc_vol_ratio_sht_stt(iLoc,iVol,iRat,iSht,iStt) = mean(tmp);
     n2o_std_loc_vol_ratio_sht_stt(iLoc,iVol,iRat,iSht,iStt) = std(tmp);
-
+    sample_count(iLoc,iVol,iRat,iSht,iStt) = numel(tmp);
     % n2o_atm_avg_vol_time(iGas,iLoc,iVol,iTime) = mean(n2o_atm_ugN_L( strcmp(T_sample.inertGas,inertGas{iGas})... 
     %        & strcmp(T_sample.location,location{iLoc}) ...
-    %        & T_sample.bottleSize==bottleSize(iVol) ...
-    %        & T_sample.shakeTime==shakeTime(iTime) ));
+    %        & T_sample.bottleSize==bottleSize(iVol) ...    %        & T_sample.shakeTime==shakeTime(iTime) ));
     
     
 end
@@ -233,7 +258,378 @@ end
 end
 % writetable(T_sample,'HS_extract.xlsx')
 
-%% plot mean N2O for location * volume * shaking time
+
+%% paper Figure 3
+% (location),(bottleSize),(ratio),(shakingTime),(standingTime)
+fs = 20;
+clf; clc;
+
+location_txt{1} = 'River Rise';
+location_txt{2} = 'Well 3';
+location_txt{3} = 'Well 4';
+
+
+% =======================================
+% iCase = 0;
+% for ratTxt = {'4.4:1','1:9'}
+%     for shtTxt = {'5','13'}
+%         for stdTxt = {'0','63'}
+%             iCase = iCase + 1;
+%             lgndTxt{iCase} = sprintf('%7s %4s (shk) %4s (stnd)',ratTxt{1},shtTxt{1},stdTxt{1});            
+%         end
+%     end
+% end
+
+clear lgndTxt
+ratTxt = {'4.4:1','1:9'};
+shtTxt = {'13','5'};
+stdTxt = {'63','0'};
+lgndTxt{1} = sprintf('%7s (ratio) %4s (shaking) %4s (standing)',ratTxt{1},shtTxt{1},stdTxt{1});            
+% lgndTxt{2} = sprintf('%7s %4s (shk) %4s (stnd)',ratTxt{1},shtTxt{1},stdTxt{2});            
+lgndTxt{2} = sprintf('%7s (ratio) %4s (shaking) %4s (standing)',ratTxt{2},shtTxt{2},stdTxt{2});            
+lgndTxt{3} = sprintf('%7s (ratio) %4s (shaking) %4s (standing)',ratTxt{2},shtTxt{2},stdTxt{1});            
+% =======================================
+
+plotMat = reshape(1:90,18,5)';
+locMat{1} = plotMat(:,1:6);
+locMat{2} = plotMat(:,7:12);
+locMat{3} = plotMat(:,13:18);
+
+
+for iLoc = 1:3
+    
+data_19_Sh5_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,1,1));
+data_19_Sh5_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,1,1));
+sample_count_19_Sh5_St0= squeeze(sample_count(iLoc,:,1,1,1));
+
+data_19_Sh5_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,1,2));
+data_19_Sh5_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,1,2));
+sample_count_19_Sh5_St63= squeeze(sample_count(iLoc,:,1,1,2));
+
+data_19_Sh13_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,2,1));
+data_19_Sh13_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,2,1));
+
+data_19_Sh13_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,2,2));
+data_19_Sh13_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,2,2));
+
+
+
+data_441_Sh5_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,1,1));
+data_441_Sh5_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,1,1));
+
+data_441_Sh5_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,1,2));
+data_441_Sh5_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,1,2));
+
+data_441_Sh13_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,2,1));
+data_441_Sh13_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,2,1));
+
+data_441_Sh13_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,2,2));
+data_441_Sh13_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,2,2));
+sample_count_441_Sh13_St63= squeeze(sample_count(iLoc,:,2,2,2));
+
+
+
+% clf
+subplot(6,18,locMat{iLoc}(:))
+% errorbar(flip([10:10:40])-2,data_441_Sh5_St0,data_441_Sh5_St0_std,'ro:','markersize',10,'linewidth',2); hold on
+% errorbar(flip([10:10:40])-1,data_441_Sh5_St63,data_441_Sh5_St63_std,'go:','markersize',10,'linewidth',2); 
+% errorbar(flip([10:10:40])+1,data_441_Sh13_St0,data_441_Sh13_St0_std,'cv-.','markersize',10,'linewidth',2); 
+errorbar(flip([10:10:40]),data_441_Sh13_St63, data_441_Sh13_St63_std,'ks-','markersize',10,'linewidth',2); hold on
+
+
+errorbar(flip([10:10:40]),data_19_Sh5_St0,data_19_Sh5_St0_std,'ro:','markersize',10,'linewidth',2); hold on
+% errorbar(flip([10:10:40]),data_19_Sh13_St63,data_19_Sh13_St63_std,'g^--','markersize',10,'linewidth',2); 
+errorbar(flip([10:10:40]),data_19_Sh5_St63,data_19_Sh5_St63_std,'b^--','markersize',10,'linewidth',2); 
+% % errorbar([10:10:40]+0,data_19_Sh13_St0,data_19_Sh13_St0_std,'ks-','linewidth',2); 
+
+
+xPos = flip([10:10:40]);
+% for i = 1:length(xPos)
+%     % % (4.4:1, 13, 63)
+%     text(xPos(i)+1, ...
+%          data_441_Sh13_St63(i) + 0.2, ...
+%          num2str(sample_count_441_Sh13_St63(i)), ...
+%          'Color','k', ...
+%          'FontSize',fs, ...
+%          'HorizontalAlignment','center');
+% 
+%     if iLoc == 1
+%         text(25, mean(data_441_Sh13_St63(2:end))+0.4, ...
+%              num2str(mean(data_441_Sh13_St63(2:end))), ...
+%              'Color','k', ...
+%              'FontSize',fs, ...
+%              'HorizontalAlignment','center');
+%     else
+%         text(25, mean(data_441_Sh13_St63(:))+0.4, ...
+%              num2str(mean(data_441_Sh13_St63(:))), ...
+%              'Color','k', ...
+%              'FontSize',fs, ...
+%              'HorizontalAlignment','center');
+%     end
+%     % % (1:9, 5, 0)
+%     text(xPos(i)-1, ...
+%          data_19_Sh5_St0(i) - 0.2, ...
+%          num2str(sample_count_19_Sh5_St0(i)), ...
+%          'Color','r', ...
+%          'FontSize',fs, ...
+%          'HorizontalAlignment','center');
+% 
+%     text(25, mean(data_19_Sh5_St0(:))-0.4, ...
+%          num2str(mean(data_19_Sh5_St0(:))), ...
+%          'Color','r', ...
+%          'FontSize',fs, ...
+%          'HorizontalAlignment','center');
+% 
+%     % % (1:9, 5, 63)
+%     text(xPos(i)+1, ...
+%          data_19_Sh5_St63(i) - 0.2, ...
+%          num2str(sample_count_19_Sh5_St63(i)), ...
+%          'Color','b', ...
+%          'FontSize',fs, ...
+%          'HorizontalAlignment','center');
+% 
+%     text(25, mean(data_19_Sh5_St63(:))-0.6, ...
+%          num2str(mean(data_19_Sh5_St63(:))), ...
+%          'Color','b', ...
+%          'FontSize',fs, ...
+%          'HorizontalAlignment','center');
+% 
+% end
+
+
+
+
+set(gca, 'XTick', [10 20 30 40], ...
+         'XTickLabel', [],...
+         'fontSize',fs)
+xlim([5 45])
+% ylim([0 4])
+% xlabel('bottle size [mL]')
+if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
+title([location_txt{iLoc}])
+
+
+if iLoc ~= 1
+    set(gca,'YTickLabel',[])
+end
+
+% if iLoc == 3
+%     legend(lgndTxt{1},lgndTxt{2},lgndTxt{3},lgndTxt{4},'interpreter','none','location','north')
+%     legend box off
+% end
+if iLoc ~= 1
+    set(gca,'YTickLabel',[])
+end
+
+
+
+
+% subplot(6,18,locMat{iLoc,2}(:))
+
+set(gca, 'XTick', [10 20 30 40], ...
+         'XTickLabel', flip(bottleSize),...
+         'fontSize',fs)
+xlim([5 45])
+ylim([-0.1 4])
+
+xlabel('bottle size [mL]')
+if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
+% title([location{iLoc}])
+
+
+if iLoc == 2
+    legend(lgndTxt,'location','north','fontsize',fs)
+    legend box off
+end
+% 
+% if iLoc == 3
+%     legend(lgndTxt{5},lgndTxt{6},lgndTxt{7},lgndTxt{8},'interpreter','none','location','north')
+%     legend box off
+% end
+if iLoc ~= 1
+    set(gca,'YTickLabel',[])
+end
+
+
+% set(gca,'XTicks', 1:4)
+
+end
+
+
+fig = gcf;
+fig.Units = 'inches';
+fig.PaperPosition = [0 0 24 8];
+
+flNameFig = sprintf('%s/processed_hsExtract/Apr2026/fig_bottleSize_err.png',pwd);
+
+
+print(fig,flNameFig,'-dpng')
+
+% boxplot([data_19_Sh5_St0(:) data_441_Sh5_St0(:)])% dataW3_19(:) dataW3_441(:) dataW4_441(:) dataW4_19(:)])
+% hold on;
+
+%% error bar 
+% % (location),(bottleSize),(ratio),(shakingTime),(standingTime)
+% 
+% clf; clc;
+% 
+% iCase = 0;
+% for ratTxt = {'1:9', '4.4:1'}
+%     for shtTxt = {'5','13'}
+%         for stdTxt = {'0','63'}
+%             iCase = iCase + 1;
+%             lgndTxt{iCase} = sprintf('%7s %4s (shk) %4s (stnd)',ratTxt{1},shtTxt{1},stdTxt{1});
+%         end
+%     end
+% end
+% 
+% plotMat = reshape(1:108,18,6)';
+% locMat{1,1} = plotMat(1:3,1:6);
+% locMat{1,2} = plotMat(4:6,1:6);
+% locMat{2,1} = plotMat(1:3,7:12);
+% locMat{2,2} = plotMat(4:6,7:12);
+% locMat{3,1} = plotMat(1:3,13:18);
+% locMat{3,2} = plotMat(4:6,13:18);
+% 
+% for iLoc = 1:3
+% 
+% data_19_Sh5_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,1,1));
+% data_19_Sh5_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,1,1));
+% 
+% data_19_Sh5_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,1,2));
+% data_19_Sh5_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,1,2));
+% 
+% data_19_Sh13_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,2,1));
+% data_19_Sh13_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,2,1));
+% 
+% data_19_Sh13_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,2,2));
+% data_19_Sh13_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,2,2));
+% 
+% 
+% 
+% data_441_Sh5_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,1,1));
+% data_441_Sh5_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,1,1));
+% 
+% data_441_Sh5_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,1,2));
+% data_441_Sh5_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,1,2));
+% 
+% data_441_Sh13_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,2,1));
+% data_441_Sh13_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,2,1));
+% 
+% data_441_Sh13_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,2,2));
+% data_441_Sh13_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,2,2));
+% 
+% % clf
+% subplot(6,18,locMat{iLoc,1}(:))
+% errorbar([10:10:40]-2,data_19_Sh5_St0,data_19_Sh5_St0_std,'rs-','linewidth',2); hold on
+% errorbar([10:10:40]-1,data_19_Sh5_St63,data_19_Sh5_St63_std,'gs-','linewidth',2); 
+% errorbar([10:10:40]+0,data_19_Sh13_St0,data_19_Sh13_St0_std,'ks-','linewidth',2); 
+% errorbar([10:10:40]+1,data_19_Sh13_St63,data_19_Sh13_St63_std,'bs-','linewidth',2); 
+% 
+% 
+% set(gca, 'XTick', [10 20 30 40], ...
+%          'XTickLabel', [],...
+%          'fontSize',16)
+% xlim([5 45])
+% ylim([0 4])
+% % xlabel('bottle size [mL]')
+% if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
+% title([location{iLoc}])
+% 
+% 
+% if iLoc == 3
+%     legend(lgndTxt{1},lgndTxt{2},lgndTxt{3},lgndTxt{4},'interpreter','none','location','north')
+%     legend box off
+% end
+% if iLoc ~= 1
+%     set(gca,'YTickLabel',[])
+% end
+% 
+% 
+% 
+% 
+% subplot(6,18,locMat{iLoc,2}(:))
+% errorbar([10:10:40]-2,data_441_Sh5_St0,data_441_Sh5_St0_std,'ro--','linewidth',2); hold on
+% errorbar([10:10:40]-1,data_441_Sh5_St63,data_441_Sh5_St63_std,'go--','linewidth',2); 
+% errorbar([10:10:40]+0,data_441_Sh13_St0,data_441_Sh13_St0_std,'ko--','linewidth',2); 
+% errorbar([10:10:40]+1,data_441_Sh13_St63, data_441_Sh13_St63_std,'bo--','linewidth',2); 
+% 
+% set(gca, 'XTick', [10 20 30 40], ...
+%          'XTickLabel', bottleSize,...
+%          'fontSize',16)
+% xlim([5 45])
+% ylim([0 4])
+% xlabel('bottle size [mL]')
+% if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
+% % title([location{iLoc}])
+% 
+% 
+% if iLoc == 3
+%     legend(lgndTxt{5},lgndTxt{6},lgndTxt{7},lgndTxt{8},'interpreter','none','location','north')
+%     legend box off
+% end
+% if iLoc ~= 1
+%     set(gca,'YTickLabel',[])
+% end
+% 
+% 
+% % set(gca,'XTicks', 1:4)
+% 
+% end
+% 
+% 
+% fig = gcf;
+% fig.Units = 'inches';
+% fig.PaperPosition = [0 0 24 8];
+% 
+% flNameFig = sprintf('%s/processed_hsExtract/Apr2026/fig_bottleSize_err.png',pwd);
+% 
+% 
+% print(fig,flNameFig,'-dpng')
+% 
+% % boxplot([data_19_Sh5_St0(:) data_441_Sh5_St0(:)])% dataW3_19(:) dataW3_441(:) dataW4_441(:) dataW4_19(:)])
+% % hold on;
+% %%
+% % plot([0 7],[mean(n2o_atm_avg_vol_time(:)) mean(n2o_atm_avg_vol_time(:))])
+% % 
+% % yl = ylim;
+% % % text(1,mean(n2o_atm_avg_vol_time(:))+0.02*diff(yl),'fontsize',14)
+% % text([1:6]-0.4,mean([dataRR_19(:) dataRR_441(:) dataW3_19(:) dataW3_441(:) dataW4_441(:) dataW4_19(:)]-0.01*diff(yl)),...
+% %     {'N_2','He','N_2','He','N_2','He',},'fontsize',14)
+% % 
+% % 
+% % ylabel('N_2O [ug N/L]')
+% % ax = gca;
+% % 
+% % ax.XTick = [1.5 3.5 5.5]
+% % ax.XTickLabels = {'Rise', 'Well 3', 'Well 4'}
+% % ax.FontSize = 14;
+% % 
+% % 
+% % fig = gcf;
+% % fig.Units = 'inches';
+% % fig.PaperPosition = [0 0 7 8];
+% % flNameFig = sprintf('He_N2_comparision.png');
+% % print(fig,flNameFig,'-dpng')
+% 
+% 
+% %%
+% RR_441 = n2o_avg_loc_vol_ratio_sht_stt(1,:,2,:,:);
+% RR_19 =  n2o_avg_loc_vol_ratio_sht_stt(1,:,1,:,:);
+% 
+% W3_441 = n2o_avg_loc_vol_ratio_sht_stt(2,:,2,:,:);
+% W3_19 =  n2o_avg_loc_vol_ratio_sht_stt(2,:,1,:,:);
+% 
+% W4_441 = n2o_avg_loc_vol_ratio_sht_stt(3,:,2,:,:);
+% W4_19 =  n2o_avg_loc_vol_ratio_sht_stt(3,:,1,:,:);
+% 
+% 
+% 
+% 
+% [ mean(RR_441(:)) mean(RR_19(:)) mean(RR_441(:))/mean(RR_19(:)) ]
+% [mean(W3_441(:)) mean(W3_19(:)) mean(W3_441(:))/mean(W3_19(:))]
+% [mean(W4_441(:)) mean(W4_19(:)) mean(W4_441(:))/mean(W4_19(:))]
+%%%% plot mean N2O for location * volume * shaking time
 % clf; clc
 % 
 % [xx,yy] = meshgrid(1:3, 1:4);
@@ -321,225 +717,3 @@ end
 % 
 %     print(fig, flNameFig, '-dpng')
 % end
-
-%% mean
-% (location),(bottleSize),(ratio),(shakingTime),(standingTime)
-figure
-clf; clc;
-
-iCase = 0;
-for ratTxt = {'1:9', '4.4:1'}
-    for shtTxt = {'5','13'}
-        for stdTxt = {'0','63'}
-            iCase = iCase + 1;
-            lgndTxt{iCase} = sprintf('%7s %4s (shk) %4s (stnd)',ratTxt{1},shtTxt{1},stdTxt{1});
-        end
-    end
-end
-
-plotMat = reshape(1:90,18,5)';
-locMat{1} = plotMat(:,1:6);
-locMat{2} = plotMat(:,7:12);
-locMat{3} = plotMat(:,13:18);
-
-for iLoc = 1:3
-    subplot(5,18,locMat{iLoc}(:))
-data_19_Sh5_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,1,1));
-data_19_Sh5_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,1,2));
-data_19_Sh13_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,2,1));
-data_19_Sh13_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,2,2));
-
-data_441_Sh5_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,1,1));
-data_441_Sh5_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,1,2));
-data_441_Sh13_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,2,1));
-data_441_Sh13_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,2,2));
-
-% clf
-plot(data_19_Sh5_St0,'rs-','linewidth',2); hold on
-plot(data_19_Sh5_St63,'gs-','linewidth',2); 
-plot(data_19_Sh13_St0,'ks-','linewidth',2); 
-plot(data_19_Sh13_St63,'bs-','linewidth',2); 
-
-plot(data_441_Sh5_St0,'ro--','linewidth',2); 
-plot(data_441_Sh5_St63,'go--','linewidth',2); 
-plot(data_441_Sh13_St0,'ko--','linewidth',2); 
-plot(data_441_Sh13_St63,'bo--','linewidth',2); 
-
-set(gca, 'XTick', [1 2 3 4], ...
-         'XTickLabel', bottleSize,...
-         'fontSize',16)
-xlim([0.7 4.3])
-ylim([0 4])
-xlabel('bottle size [mL]')
-if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
-title([location{iLoc}])
-
-
-if iLoc == 2
-    legend(lgndTxt,'interpreter','none','location','north')
-    legend box off
-end
-if iLoc ~= 1
-    set(gca,'YTickLabel',[])
-end
-
-
-% set(gca,'XTicks', 1:4)
-
-end
-
-
-fig = gcf;
-fig.Units = 'inches';
-fig.PaperPosition = [0 0 24 6];
-
-flNameFig = sprintf('%s/processed_hsExtract/Apr2026/fig_bottleSize.png',pwd);
-
-
-print(fig,flNameFig,'-dpng')
-
-% boxplot([data_19_Sh5_St0(:) data_441_Sh5_St0(:)])% dataW3_19(:) dataW3_441(:) dataW4_441(:) dataW4_19(:)])
-% hold on;
-%% error bar
-% (location),(bottleSize),(ratio),(shakingTime),(standingTime)
-
-clf; clc;
-
-iCase = 0;
-for ratTxt = {'1:9', '4.4:1'}
-    for shtTxt = {'5','13'}
-        for stdTxt = {'0','63'}
-            iCase = iCase + 1;
-            lgndTxt{iCase} = sprintf('%7s %4s (shk) %4s (stnd)',ratTxt{1},shtTxt{1},stdTxt{1});
-        end
-    end
-end
-
-plotMat = reshape(1:108,18,6)';
-locMat{1,1} = plotMat(1:3,1:6);
-locMat{1,2} = plotMat(4:6,1:6);
-locMat{2,1} = plotMat(1:3,7:12);
-locMat{2,2} = plotMat(4:6,7:12);
-locMat{3,1} = plotMat(1:3,13:18);
-locMat{3,2} = plotMat(4:6,13:18);
-
-for iLoc = 1:3
-    
-data_19_Sh5_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,1,1));
-data_19_Sh5_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,1,1));
-
-data_19_Sh5_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,1,2));
-data_19_Sh5_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,1,2));
-
-data_19_Sh13_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,2,1));
-data_19_Sh13_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,2,1));
-
-data_19_Sh13_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,1,2,2));
-data_19_Sh13_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,1,2,2));
-
-
-
-data_441_Sh5_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,1,1));
-data_441_Sh5_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,1,1));
-
-data_441_Sh5_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,1,2));
-data_441_Sh5_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,1,2));
-
-data_441_Sh13_St0= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,2,1));
-data_441_Sh13_St0_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,2,1));
-
-data_441_Sh13_St63= squeeze(n2o_avg_loc_vol_ratio_sht_stt(iLoc,:,2,2,2));
-data_441_Sh13_St63_std= squeeze(n2o_std_loc_vol_ratio_sht_stt(iLoc,:,2,2,2));
-
-% clf
-subplot(6,18,locMat{iLoc,1}(:))
-errorbar([10:10:40]-2,data_19_Sh5_St0,data_19_Sh5_St0_std,'rs-','linewidth',2); hold on
-errorbar([10:10:40]-1,data_19_Sh5_St63,data_19_Sh5_St63_std,'gs-','linewidth',2); 
-errorbar([10:10:40]+0,data_19_Sh13_St0,data_19_Sh13_St0_std,'ks-','linewidth',2); 
-errorbar([10:10:40]+1,data_19_Sh13_St63,data_19_Sh13_St63_std,'bs-','linewidth',2); 
-
-
-set(gca, 'XTick', [10 20 30 40], ...
-         'XTickLabel', [],...
-         'fontSize',16)
-xlim([5 45])
-ylim([0 4])
-% xlabel('bottle size [mL]')
-if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
-title([location{iLoc}])
-
-
-if iLoc == 3
-    legend(lgndTxt{1},lgndTxt{2},lgndTxt{3},lgndTxt{4},'interpreter','none','location','north')
-    legend box off
-end
-if iLoc ~= 1
-    set(gca,'YTickLabel',[])
-end
-
-
-
-
-subplot(6,18,locMat{iLoc,2}(:))
-errorbar([10:10:40]-2,data_441_Sh5_St0,data_441_Sh5_St0_std,'ro--','linewidth',2); hold on
-errorbar([10:10:40]-1,data_441_Sh5_St63,data_441_Sh5_St63_std,'go--','linewidth',2); 
-errorbar([10:10:40]+0,data_441_Sh13_St0,data_441_Sh13_St0_std,'ko--','linewidth',2); 
-errorbar([10:10:40]+1,data_441_Sh13_St63, data_441_Sh13_St63_std,'bo--','linewidth',2); 
-
-set(gca, 'XTick', [10 20 30 40], ...
-         'XTickLabel', bottleSize,...
-         'fontSize',16)
-xlim([5 45])
-ylim([0 4])
-xlabel('bottle size [mL]')
-if iLoc ==1; ylabel('N_2O [\mug N/L]'); end
-% title([location{iLoc}])
-
-
-if iLoc == 3
-    legend(lgndTxt{5},lgndTxt{6},lgndTxt{7},lgndTxt{8},'interpreter','none','location','north')
-    legend box off
-end
-if iLoc ~= 1
-    set(gca,'YTickLabel',[])
-end
-
-
-% set(gca,'XTicks', 1:4)
-
-end
-
-
-fig = gcf;
-fig.Units = 'inches';
-fig.PaperPosition = [0 0 24 8];
-
-flNameFig = sprintf('%s/processed_hsExtract/Apr2026/fig_bottleSize_err.png',pwd);
-
-
-print(fig,flNameFig,'-dpng')
-
-% boxplot([data_19_Sh5_St0(:) data_441_Sh5_St0(:)])% dataW3_19(:) dataW3_441(:) dataW4_441(:) dataW4_19(:)])
-% hold on;
-%%
-plot([0 7],[mean(n2o_atm_avg_vol_time(:)) mean(n2o_atm_avg_vol_time(:))])
-
-yl = ylim;
-% text(1,mean(n2o_atm_avg_vol_time(:))+0.02*diff(yl),'fontsize',14)
-text([1:6]-0.4,mean([dataRR_19(:) dataRR_441(:) dataW3_19(:) dataW3_441(:) dataW4_441(:) dataW4_19(:)]-0.01*diff(yl)),...
-    {'N_2','He','N_2','He','N_2','He',},'fontsize',14)
-
-                        
-ylabel('N_2O [ug N/L]')
-ax = gca;
-
-ax.XTick = [1.5 3.5 5.5]
-ax.XTickLabels = {'Rise', 'Well 3', 'Well 4'}
-ax.FontSize = 14;
-
-
-fig = gcf;
-fig.Units = 'inches';
-fig.PaperPosition = [0 0 7 8];
-flNameFig = sprintf('He_N2_comparision.png');
-print(fig,flNameFig,'-dpng')

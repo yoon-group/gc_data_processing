@@ -35,9 +35,12 @@ clear all; clc; clf
 % new data. 
 % =========================================================================
 %% directory setting
-dir_.data = sprintf('/home/public/gcData/hsExtract/Apr2026-test/'); % data folder
+% dir_.data = sprintf('/home/public/gcData/hsExtract/May2026_DI/'); % data folder
+% dir_.results = sprintf('%s/processed_hsExtract/May2026_DI/',pwd); % where to save results
+dir_.data = sprintf('/home/public/gcData/hsExtract/June2026/'); % data folder
+dir_.results = sprintf('%s/processed_hsExtract/June2026/',pwd); % where to save results
 
-dir_.results = sprintf('%s/processed_hsExtract/Apr2026-test/',pwd); % where to save results
+
 if ~exist(dir_.results,'dir'); mkdir(dir_.results); end
 
 dir_.fig = [dir_.results 'fig/']; % where to save figures
@@ -59,10 +62,10 @@ for il = 3:numel(flNameStruct)
 end
 
 %% Identify unanalyzed files
-% if exist(flNameOut,'file')
-%     load(flNameOut,'T_sample');
-%     flNameList = setdiff(flNameList,T_sample.flNameList);
-% end
+if exist(flNameOut,'file')
+    load(flNameOut,'T_sample');
+    flNameList = setdiff(flNameList,T_sample.flNameList);
+end
 nSample = length(flNameList);
 
 %% peak measuring

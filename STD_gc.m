@@ -20,7 +20,9 @@ clear all; clc; clf
 % Detector (ECD) according to gas type to be detected. For N2O, our GC
 % works well with:
 %           
-        expected_arrival_time = 1.9; % [min] 
+    expcted_arrival_time_min  = 1.80;% [min] 
+    expcted_arrival_time = 1.9; % [min] 
+    expcted_arrival_time_max = 1.95; % [min] 
 % The user should also provide manufactured N2O gas stock concentration: 
 % 
         stock = 0.97; %[ppm]
@@ -31,7 +33,7 @@ clear all; clc; clf
 % 
 % =========================================================================
 %% directory setting
-dir_.data = sprintf('/home/public/gcData/STD/Feb2026/'); % data folder
+dir_.data = sprintf('/home/public/gcData/STD/Hydro_Camp_2026/'); % data folder
 
 dir_.results = sprintf('%s/processed_STD/',pwd); % where to save results
 if ~exist(dir_.results,'dir'); mkdir(dir_.results); end
@@ -71,13 +73,18 @@ for iSample = 1:nSample
     note = textscan(flName, '%s','delimiter','_' ); note = note{1};
 
     indTriplicate(iSample) = str2double(sprintf('%s',note{2})); % triplicate index
-    cnc(iSample) = str2double(sprintf('%s',note{3}))*stock/100; % percentage [ppm]
+    cnc(iSample) = str2double(sprintf('%s',note{2}))*stock/100; % percentage [ppm]
 end
 
 %% Peak measuring
 for iSample = 1:nSample
     fprintf('(%d/%d) STD sample %s --> processing -->',iSample,length(flNameList),flNameList{iSample}(1:end-4))
-    peakH(iSample) = peakMeasure(dir_,flNameList{iSample},expected_arrival_time);    
+    % peakH(iSample) = peakMeasure(dir_,flNameList{iSample},expected_arrival_time);    
+    [peakH(iSample), peakT(iSample)] =peakMeasure(flNameList{iSample},...
+                                        expcted_arrival_time_min,...
+                                        expcted_arrival_time,...
+                                        expcted_arrival_time_max,dir_);    
+
     fprintf('  completed \n')
 end
 
